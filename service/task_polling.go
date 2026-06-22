@@ -192,7 +192,14 @@ func updateSunoTasks(ctx context.Context, channelId int, taskIds []string, taskM
 		return errors.New("adaptor not found")
 	}
 	proxy := ch.GetSetting().Proxy
-	resp, err := adaptor.FetchTask(*ch.BaseURL, ch.Key, map[string]any{
+	// Fix: Pick a single key for multi-key channels instead of raw \n concatenated string
+	key := ch.Key
+	if ch.ChannelInfo.IsMultiKey {
+		if k, _, err := ch.GetNextEnabledKey(); err == nil && k != "" {
+			key = k
+		}
+	}
+	resp, err := adaptor.FetchTask(*ch.BaseURL, key, map[string]any{
 		"ids": taskIds,
 	}, proxy)
 	if err != nil {
@@ -234,7 +241,10 @@ func updateSunoTasks(ctx context.Context, channelId int, taskIds []string, taskM
 		if responseItem.FailReason != "" || task.Status == model.TaskStatusFailure {
 			logger.LogInfo(ctx, task.TaskID+" 构建失败，"+task.FailReason)
 			task.Progress = "100%"
-			RefundTaskQuota(ctx, task, task.FailReason)
+			// 只在首次失败时退款，防止重复退款
+			if responseItem.Status == string(model.TaskStatusFailure) && task.Status != model.TaskStatusFailure {
+				RefundTaskQuota(ctx, task, task.FailReason)
+			}
 		}
 		if responseItem.Status == model.TaskStatusSuccess {
 			task.Progress = "100%"
@@ -329,7 +339,14 @@ func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, chann
 	info.ChannelMeta = &relaycommon.ChannelMeta{
 		ChannelBaseUrl: cacheGetChannel.GetBaseURL(),
 	}
-	info.ApiKey = cacheGetChannel.Key
+	// Fix: Pick a single key for multi-key channels before Init()
+	apiKey := cacheGetChannel.Key
+	if cacheGetChannel.ChannelInfo.IsMultiKey {
+		if k, _, err := cacheGetChannel.GetNextEnabledKey(); err == nil && k != "" {
+			apiKey = k
+		}
+	}
+	info.ApiKey = apiKey
 	adaptor.Init(info)
 	for _, taskId := range taskIds {
 		if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
@@ -353,7 +370,13 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		logger.LogError(ctx, fmt.Sprintf("Task %s not found in taskM", taskId))
 		return fmt.Errorf("task %s not found", taskId)
 	}
+	// Pick a single key for multi-key channels instead of raw concatenated string
 	key := ch.Key
+	if ch.ChannelInfo.IsMultiKey {
+		if k, _, err := ch.GetNextEnabledKey(); err == nil && k != "" {
+			key = k
+		}
+	}
 
 	privateData := task.PrivateData
 	if privateData.Key != "" {

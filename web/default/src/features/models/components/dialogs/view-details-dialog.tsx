@@ -1,5 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
-import { Copy, ExternalLink, Loader2, RefreshCcw } from 'lucide-react'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -19,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Copy, ExternalLink, Loader2, RefreshCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-
-import { Dialog } from '@/components/dialog'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
@@ -30,7 +28,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Separator } from '@/components/ui/separator'
-
+import { Dialog } from '@/components/dialog'
 import { getDeployment, listDeploymentContainers } from '../../api'
 
 export function ViewDetailsDialog({
@@ -75,14 +73,10 @@ export function ViewDetailsDialog({
 
   const locations = useMemo(() => {
     const items = details?.locations
-    if (!Array.isArray(items)) {
-      return []
-    }
+    if (!Array.isArray(items)) return []
     return items
       .map((x) => {
-        if (!x || typeof x !== 'object') {
-          return null
-        }
+        if (!x || typeof x !== 'object') return null
         const name = (x as Record<string, unknown>)?.name
         const iso2 = (x as Record<string, unknown>)?.iso2
         const id = (x as Record<string, unknown>)?.id
@@ -92,9 +86,7 @@ export function ViewDetailsDialog({
   }, [details])
 
   const handleCopyId = async () => {
-    if (deploymentId === null || deploymentId === undefined) {
-      return
-    }
+    if (deploymentId === null || deploymentId === undefined) return
     try {
       await navigator.clipboard.writeText(String(deploymentId))
       toast.success(t('Copied'))
@@ -116,9 +108,6 @@ export function ViewDetailsDialog({
       return ''
     }
   }, [details])
-  const isDetailsLoading = isLoadingDetails || isLoadingContainers
-  const showDetailsError = !isDetailsLoading && !detailsRes?.success
-  const showDetailsContent = !isDetailsLoading && detailsRes?.success
 
   return (
     <Dialog
@@ -129,13 +118,15 @@ export function ViewDetailsDialog({
       contentHeight='auto'
       bodyClassName='space-y-4'
       footer={
-        <Button
-          variant='outline'
-          onClick={() => onOpenChange(false)}
-          className='w-full sm:w-auto'
-        >
-          {t('Close')}
-        </Button>
+        <>
+          <Button
+            variant='outline'
+            onClick={() => onOpenChange(false)}
+            className='w-full sm:w-auto'
+          >
+            {t('Close')}
+          </Button>
+        </>
       }
     >
       <div className='max-h-[calc(100dvh-8.5rem)] space-y-3 overflow-y-auto py-2 pr-1 sm:max-h-[72vh] sm:space-y-4'>
@@ -167,17 +158,15 @@ export function ViewDetailsDialog({
 
         <Separator />
 
-        {isDetailsLoading ? (
+        {isLoadingDetails || isLoadingContainers ? (
           <div className='flex items-center justify-center py-10'>
             <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
           </div>
-        ) : null}
-        {showDetailsError ? (
+        ) : !detailsRes?.success ? (
           <div className='text-muted-foreground py-10 text-center text-sm'>
             {detailsRes?.message || t('Failed to fetch deployment details')}
           </div>
-        ) : null}
-        {showDetailsContent ? (
+        ) : (
           <>
             <div className='grid gap-3 sm:grid-cols-2'>
               <div className='rounded-lg border p-3'>
@@ -236,9 +225,7 @@ export function ViewDetailsDialog({
                 <div className='space-y-2'>
                   {containers.map((c) => {
                     const id = c?.container_id
-                    if (typeof id !== 'string' || !id) {
-                      return null
-                    }
+                    if (typeof id !== 'string' || !id) return null
                     const status =
                       typeof c?.status === 'string' ? c.status : undefined
                     const url =
@@ -276,13 +263,13 @@ export function ViewDetailsDialog({
                 {t('Raw JSON')}
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <pre className='bg-muted text-foreground mt-3 max-h-[360px] overflow-auto rounded-md p-3 text-xs'>
+                <pre className='mt-3 max-h-[360px] overflow-auto rounded-md bg-black p-3 text-xs text-gray-200'>
                   {payloadJson || '-'}
                 </pre>
               </CollapsibleContent>
             </Collapsible>
           </>
-        ) : null}
+        )}
       </div>
     </Dialog>
   )

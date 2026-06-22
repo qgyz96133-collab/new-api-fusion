@@ -75,8 +75,12 @@ func ChannelType2APIType(channelType int) (int, bool) {
 		apiType = constant.APITypeReplicate
 	case constant.ChannelTypeCodex:
 		apiType = constant.APITypeCodex
-	case constant.ChannelTypeAdvancedCustom:
-		apiType = constant.APITypeAdvancedCustom
+	case constant.ChannelTypeKiro:
+		apiType = constant.APITypeAnthropic // Kiro uses Claude Messages API
+	case constant.ChannelTypeMimoFree:
+		apiType = constant.APITypeMimo // MiMo uses custom adaptor with bootstrap JWT
+	case constant.ChannelTypeQoder:
+		apiType = constant.APITypeQoder // Qoder uses COSY signing
 	}
 	if apiType == -1 {
 		return constant.APITypeOpenAI, false

@@ -140,7 +140,7 @@ const FooterBar = () => {
                     rel='noopener noreferrer'
                     className='!text-semi-color-text-1'
                   >
-                    MjProxy
+                    Midjourney-Proxy
                   </a>
                   <a
                     href='https://github.com/Calcium-Ion/new-api-key-tool'

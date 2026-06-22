@@ -1,0 +1,1 @@
+replace kiroHTTPClient with standard Go http.Client + custom transport that sets User-Agent

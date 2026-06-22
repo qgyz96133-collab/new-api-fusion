@@ -34,11 +34,6 @@ const DASHBOARD_SECTIONS = [
     build: () => null,
   },
   {
-    id: 'flow',
-    titleKey: 'Flow',
-    build: () => null,
-  },
-  {
     id: 'users',
     titleKey: 'User Analytics',
     adminOnly: true,

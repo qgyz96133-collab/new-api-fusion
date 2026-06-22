@@ -13,6 +13,7 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
+	"github.com/QuantumNous/new-api/relay/rtk"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -24,6 +25,11 @@ import (
 
 func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
+
+	// Kiro channel: use dedicated protocol handler (OpenAI → AWS EventStream)
+	if IsKiroChannel(info.ChannelType) {
+		return KiroRelay(c, info)
+	}
 
 	textReq, ok := info.Request.(*dto.GeneralOpenAIRequest)
 	if !ok {
@@ -171,6 +177,14 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 			if err != nil {
 				return newAPIErrorFromParamOverride(err)
 			}
+		}
+
+		// Apply translation fixes and RTK compression (best-effort, non-fatal)
+		enableRTK := rtk.IsEnabled()
+		cavemanLevel := int(rtk.GetCavemanLevel())
+		fixedData, fixErr := ApplyAllFixes(jsonData, "openai", info.OriginModelName, enableRTK, cavemanLevel)
+		if fixErr == nil {
+			jsonData = fixedData
 		}
 
 		logger.LogDebug(c, "text request body: %s", jsonData)

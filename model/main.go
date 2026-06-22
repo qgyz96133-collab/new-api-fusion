@@ -248,6 +248,9 @@ func InitLogDB() (err error) {
 }
 
 func migrateDB() error {
+	// Auto-migrate new tables
+	DB.AutoMigrate(&TLSFingerprintProfile{}, &SubscriptionQuota{}, &ChannelHealthRecord{}, &OpsAlert{}, &UserAttributeDefinition{}, &UserAttributeValue{})
+
 	// Migrate price_amount column from float/double to decimal for existing tables
 	migrateSubscriptionPlanPriceAmount()
 	// Migrate model_limits column from varchar to text for existing tables
@@ -281,6 +284,12 @@ func migrateDB() error {
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
+		&ErrorPassthroughRule{},
+		&UsageCleanupTask{},
+		&Proxy{},
+		&ChannelMonitor{},
+		&ChannelMonitorHistory{},
+		&WebSearchProvider{},
 	)
 	if err != nil {
 		return err
@@ -330,6 +339,12 @@ func migrateDBFast() error {
 		{&CustomOAuthProvider{}, "CustomOAuthProvider"},
 		{&UserOAuthBinding{}, "UserOAuthBinding"},
 		{&PerfMetric{}, "PerfMetric"},
+		{&ErrorPassthroughRule{}, "ErrorPassthroughRule"},
+		{&UsageCleanupTask{}, "UsageCleanupTask"},
+		{&Proxy{}, "Proxy"},
+		{&ChannelMonitor{}, "ChannelMonitor"},
+		{&ChannelMonitorHistory{}, "ChannelMonitorHistory"},
+		{&WebSearchProvider{}, "WebSearchProvider"},
 	}
 	// 动态计算migration数量，确保errChan缓冲区足够大
 	errChan := make(chan error, len(migrations))
@@ -398,13 +413,11 @@ func ensureSubscriptionPlanTableSQLite() error {
 ` + "`enabled`" + ` numeric DEFAULT 1,
 ` + "`sort_order`" + ` integer DEFAULT 0,
 ` + "`allow_balance_pay`" + ` numeric DEFAULT 1,
-` + "`allow_wallet_overflow`" + ` numeric DEFAULT 1,
 ` + "`stripe_price_id`" + ` varchar(128) DEFAULT '',
 ` + "`creem_product_id`" + ` varchar(128) DEFAULT '',
 ` + "`waffo_pancake_product_id`" + ` varchar(128) DEFAULT '',
 ` + "`max_purchase_per_user`" + ` integer DEFAULT 0,
 ` + "`upgrade_group`" + ` varchar(64) DEFAULT '',
-` + "`downgrade_group`" + ` varchar(64) DEFAULT '',
 ` + "`total_amount`" + ` bigint NOT NULL DEFAULT 0,
 ` + "`quota_reset_period`" + ` varchar(16) DEFAULT 'never',
 ` + "`quota_reset_custom_seconds`" + ` bigint DEFAULT 0,
@@ -435,13 +448,11 @@ PRIMARY KEY (` + "`id`" + `)
 		{Name: "enabled", DDL: "`enabled` numeric DEFAULT 1"},
 		{Name: "sort_order", DDL: "`sort_order` integer DEFAULT 0"},
 		{Name: "allow_balance_pay", DDL: "`allow_balance_pay` numeric DEFAULT 1"},
-		{Name: "allow_wallet_overflow", DDL: "`allow_wallet_overflow` numeric DEFAULT 1"},
 		{Name: "stripe_price_id", DDL: "`stripe_price_id` varchar(128) DEFAULT ''"},
 		{Name: "creem_product_id", DDL: "`creem_product_id` varchar(128) DEFAULT ''"},
 		{Name: "waffo_pancake_product_id", DDL: "`waffo_pancake_product_id` varchar(128) DEFAULT ''"},
 		{Name: "max_purchase_per_user", DDL: "`max_purchase_per_user` integer DEFAULT 0"},
 		{Name: "upgrade_group", DDL: "`upgrade_group` varchar(64) DEFAULT ''"},
-		{Name: "downgrade_group", DDL: "`downgrade_group` varchar(64) DEFAULT ''"},
 		{Name: "total_amount", DDL: "`total_amount` bigint NOT NULL DEFAULT 0"},
 		{Name: "quota_reset_period", DDL: "`quota_reset_period` varchar(16) DEFAULT 'never'"},
 		{Name: "quota_reset_custom_seconds", DDL: "`quota_reset_custom_seconds` bigint DEFAULT 0"},

@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/console_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -17,6 +18,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// parseFingerprintType converts string to FingerprintType
+func parseFingerprintType(s string) common.FingerprintType {
+	switch strings.ToLower(s) {
+	case "firefox":
+		return common.FingerprintFirefox
+	case "safari":
+		return common.FingerprintSafari
+	case "edge":
+		return common.FingerprintEdge
+	default:
+		return common.FingerprintChrome
+	}
+}
 
 var completionRatioMetaOptionKeys = []string{
 	"ModelPrice",
@@ -330,6 +345,29 @@ func UpdateOption(c *gin.Context) {
 				"message": err.Error(),
 			})
 			return
+		}
+	case "utls_enabled":
+		// Enable or disable uTLS transport
+		if option.Value.(string) == "true" {
+			// Get current fingerprint from OptionMap
+			common.OptionMapRWMutex.RLock()
+			fp := common.OptionMap["utls_fingerprint"]
+			common.OptionMapRWMutex.RUnlock()
+			if fp == "" {
+				fp = "chrome" // default
+			}
+			service.EnableUTLS(parseFingerprintType(fp))
+		} else {
+			service.DisableUTLS()
+		}
+	case "utls_fingerprint":
+		// Update fingerprint type
+		common.OptionMapRWMutex.RLock()
+		enabled := common.OptionMap["utls_enabled"]
+		common.OptionMapRWMutex.RUnlock()
+		if enabled == "true" {
+			// Re-enable with new fingerprint
+			service.EnableUTLS(parseFingerprintType(option.Value.(string)))
 		}
 	}
 	err = model.UpdateOption(option.Key, option.Value.(string))

@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
+	"github.com/QuantumNous/new-api/relay/rtk"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/setting/reasoning"
@@ -180,6 +181,14 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			if err != nil {
 				return newAPIErrorFromParamOverride(err)
 			}
+		}
+
+		// Apply translation fixes and RTK compression (best-effort, non-fatal)
+		enableRTK := rtk.IsEnabled()
+		cavemanLevel := int(rtk.GetCavemanLevel())
+		fixedData, fixErr := ApplyAllFixes(jsonData, "claude", info.OriginModelName, enableRTK, cavemanLevel)
+		if fixErr == nil {
+			jsonData = fixedData
 		}
 
 		logger.LogDebug(c, "requestBody: %s", jsonData)

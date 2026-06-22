@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -14,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay"
 	"github.com/QuantumNous/new-api/relay/channel"
+	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 )
@@ -52,7 +54,14 @@ func updateVideoTaskAll(ctx context.Context, platform constant.TaskPlatform, cha
 	info.ChannelMeta = &relaycommon.ChannelMeta{
 		ChannelBaseUrl: cacheGetChannel.GetBaseURL(),
 	}
-	info.ApiKey = cacheGetChannel.Key
+	// Fix: Pick a single key for multi-key channels before Init()
+	apiKey := cacheGetChannel.Key
+	if cacheGetChannel.ChannelInfo.IsMultiKey {
+		if k, _, err := cacheGetChannel.GetNextEnabledKey(); err == nil && k != "" {
+			apiKey = k
+		}
+	}
+	info.ApiKey = apiKey
 	adaptor.Init(info)
 	for _, taskId := range taskIds {
 		if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
@@ -74,7 +83,17 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 		logger.LogError(ctx, fmt.Sprintf("Task %s not found in taskM", taskId))
 		return fmt.Errorf("task %s not found", taskId)
 	}
+
+	// 创建快照用于 CAS 比较
+	snap := task.Snapshot()
+
+	// Pick a single key for multi-key channels
 	key := channel.Key
+	if channel.ChannelInfo.IsMultiKey {
+		if k, _, err := channel.GetNextEnabledKey(); err == nil && k != "" {
+			key = k
+		}
+	}
 
 	privateData := task.PrivateData
 	if privateData.Key != "" {
@@ -106,7 +125,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 		t := responseItems.Data
 		taskResult.TaskID = t.TaskID
 		taskResult.Status = string(t.Status)
-		taskResult.Url = t.FailReason
+		taskResult.Url = t.GetResultURL()
 		taskResult.Progress = t.Progress
 		taskResult.Reason = t.FailReason
 		task.Data = t.Data
@@ -119,9 +138,24 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 	logger.LogDebug(ctx, "UpdateVideoSingleTask taskResult: %+v", taskResult)
 
 	now := time.Now().Unix()
+	// Fix Bug 3: Handle empty status with 429 check (same as service/task_polling.go)
 	if taskResult.Status == "" {
-		//return fmt.Errorf("task %s status is empty", taskId)
-		taskResult = relaycommon.FailTaskInfo("upstream returned empty status")
+		errorResult := &dto.GeneralErrorResponse{}
+		if err = common.Unmarshal(responseBody, &errorResult); err == nil {
+			openaiError := errorResult.TryToOpenAIError()
+			if openaiError != nil {
+				if openaiError.Code == "429" {
+					// Rate limit - keep waiting, don't mark as failure
+					return nil
+				}
+				taskResult = relaycommon.FailTaskInfo("upstream returned error")
+			} else {
+				logger.LogError(ctx, fmt.Sprintf("Task %s returned empty status with unrecognized error format, response: %s", taskId, string(responseBody)))
+				taskResult = relaycommon.FailTaskInfo("upstream returned unrecognized message")
+			}
+		} else {
+			taskResult = relaycommon.FailTaskInfo("upstream returned empty status")
+		}
 	}
 
 	// 记录原本的状态，防止重复退款
@@ -141,12 +175,20 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 			task.StartTime = now
 		}
 	case model.TaskStatusSuccess:
-		task.Progress = "100%"
+		task.Progress = taskcommon.ProgressComplete
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		if !(len(taskResult.Url) > 5 && taskResult.Url[:5] == "data:") {
-			task.FailReason = taskResult.Url
+		// Fix Bug 2: Set ResultURL properly
+		if strings.HasPrefix(taskResult.Url, "data:") {
+			// data: URI (e.g. Vertex base64 encoded video) — keep in Data, not in ResultURL
+			task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
+		} else if taskResult.Url != "" {
+			// Direct upstream URL (e.g. Kling, Ali, Doubao, etc.)
+			task.PrivateData.ResultURL = taskResult.Url
+		} else {
+			// No URL from adaptor — construct proxy URL using public task ID
+			task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
 		}
 
 		// 如果返回了 total_tokens 并且配置了模型倍率(非固定价格),则重新计费
@@ -261,9 +303,24 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 	if taskResult.Progress != "" {
 		task.Progress = taskResult.Progress
 	}
-	if err := task.Update(); err != nil {
-		common.SysLog("UpdateVideoTask task error: " + err.Error())
-		shouldRefund = false
+
+	// Fix Bug 4: 使用 CAS 操作防止并发覆盖
+	// 只有状态真正改变时才执行更新，并检查是否成功获取锁
+	if task.Status != snap.Status {
+		won, err := task.UpdateWithStatus(snap.Status)
+		if err != nil {
+			logger.LogError(ctx, fmt.Sprintf("Task %s UpdateWithStatus error: %s", task.TaskID, err.Error()))
+			shouldRefund = false
+		} else if !won {
+			logger.LogWarn(ctx, fmt.Sprintf("Task %s already transitioned by another process, skip refund", task.TaskID))
+			shouldRefund = false
+		}
+	} else {
+		// 状态未改变，普通更新即可
+		if err := task.Update(); err != nil {
+			common.SysLog("UpdateVideoTask task error: " + err.Error())
+			shouldRefund = false
+		}
 	}
 
 	if shouldRefund {

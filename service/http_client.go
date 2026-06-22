@@ -170,3 +170,84 @@ func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 		return nil, fmt.Errorf("unsupported proxy scheme: %s, must be http, https, socks5 or socks5h", parsedURL.Scheme)
 	}
 }
+
+// --- uTLS Integration (ported from AIClient2API tls-sidecar) ---
+
+var (
+	utlsClient      *http.Client
+	utlsClientMu    sync.Mutex
+	utlsEnabled     bool
+	utlsFingerprint common.FingerprintType
+)
+
+// EnableUTLS enables uTLS transport for all upstream requests
+func EnableUTLS(fingerprint common.FingerprintType) {
+	utlsClientMu.Lock()
+	defer utlsClientMu.Unlock()
+
+	cfg := common.UTransportConfig{
+		Fingerprint:    fingerprint,
+		ConnectTimeout: 30 * time.Second,
+		IdleTimeout:    time.Duration(common.RelayIdleConnTimeout) * time.Second,
+	}
+	transport := common.NewUTLSTransport(cfg)
+
+	if common.TLSInsecureSkipVerify {
+		// uTLS handles its own TLS config, but we note the preference
+	}
+
+	utlsClient = &http.Client{
+		Transport:     transport,
+		CheckRedirect: checkRedirect,
+	}
+	if common.RelayTimeout > 0 {
+		utlsClient.Timeout = time.Duration(common.RelayTimeout) * time.Second
+	}
+
+	utlsEnabled = true
+	utlsFingerprint = fingerprint
+}
+
+// DisableUTLS disables uTLS transport
+func DisableUTLS() {
+	utlsClientMu.Lock()
+	defer utlsClientMu.Unlock()
+	utlsEnabled = false
+	utlsClient = nil
+}
+
+// IsUTLSEnabled returns whether uTLS is active
+func IsUTLSEnabled() bool {
+	utlsClientMu.Lock()
+	defer utlsClientMu.Unlock()
+	return utlsEnabled
+}
+
+// GetUTLSHttpClient returns the uTLS-enabled HTTP client, or nil if not enabled
+func GetUTLSHttpClient() *http.Client {
+	utlsClientMu.Lock()
+	defer utlsClientMu.Unlock()
+	if utlsEnabled && utlsClient != nil {
+		return utlsClient
+	}
+	return nil
+}
+
+// GetSmartHttpClient returns uTLS client if enabled, otherwise standard client
+// This is the recommended entry point for relay upstream requests
+func GetSmartHttpClient() *http.Client {
+	if client := GetUTLSHttpClient(); client != nil {
+		return client
+	}
+	return GetHttpClient()
+}
+
+// GetSmartHttpClientWithProxy returns uTLS+proxy client if enabled, otherwise proxy client
+func GetSmartHttpClientWithProxy(proxyURL string) (*http.Client, error) {
+	if proxyURL == "" {
+		return GetSmartHttpClient(), nil
+	}
+	// For proxy requests, use the standard proxy client
+	// (uTLS proxy integration can be added later)
+	return GetHttpClientWithProxy(proxyURL)
+}

@@ -36,3 +36,21 @@ data/
 token_estimator_test.go
 skills-lock.json
 .playwright-mcp
+
+# 编译产物（二进制文件）
+new-api-fusion
+new-api-rtk
+new-api-agnes
+new-api
+
+# 确保排除的内容
+web/default/node_modules/
+web/classic/node_modules/
+web/node_modules/
+data/
+*.tar.gz
+*.zip
+*.db
+*.sqlite
+node_modules/
+qodercli

@@ -115,11 +115,11 @@ export const LOG_TYPE_FILTERS = [
 ] as const
 
 // ============================================================================
-// Drawing Logs (MjProxy) Constants
+// Drawing Logs (Midjourney) Constants
 // ============================================================================
 
 /**
- * MjProxy task types
+ * Midjourney task types
  * Must match backend constants in constant/midjourney.go
  */
 export const MJ_TASK_TYPES = {
@@ -144,7 +144,7 @@ export const MJ_TASK_TYPES = {
 } as const
 
 /**
- * MjProxy task status
+ * Midjourney task status
  */
 export const MJ_TASK_STATUS = {
   NOT_START: 'NOT_START', // 未启动
@@ -156,7 +156,7 @@ export const MJ_TASK_STATUS = {
 } as const
 
 /**
- * MjProxy submit result codes
+ * Midjourney submit result codes
  */
 export const MJ_SUBMIT_RESULT_CODES = {
   NOT_SUBMITTED: 0, // 未提交
@@ -223,7 +223,7 @@ export interface StatusMapping {
 }
 
 /**
- * MjProxy task type mappings
+ * Midjourney task type mappings
  */
 export const MJ_TASK_TYPE_MAPPINGS: Record<string, StatusMapping> = {
   [MJ_TASK_TYPES.IMAGINE]: { label: 'Draw', variant: 'blue' },
@@ -246,7 +246,7 @@ export const MJ_TASK_TYPE_MAPPINGS: Record<string, StatusMapping> = {
 }
 
 /**
- * MjProxy task status mappings
+ * Midjourney task status mappings
  */
 export const MJ_STATUS_MAPPINGS: Record<string, StatusMapping> = {
   [MJ_TASK_STATUS.SUCCESS]: { label: 'Success', variant: 'green' },
@@ -258,7 +258,7 @@ export const MJ_STATUS_MAPPINGS: Record<string, StatusMapping> = {
 }
 
 /**
- * MjProxy submit result mappings
+ * Midjourney submit result mappings
  */
 export const MJ_SUBMIT_RESULT_MAPPINGS: Record<string, StatusMapping> = {
   [String(MJ_SUBMIT_RESULT_CODES.SUBMITTED)]: {

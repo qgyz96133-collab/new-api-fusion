@@ -29,6 +29,19 @@ const (
 	ContextKeyChannelSetting           ContextKey = "channel_setting"
 	ContextKeyChannelOtherSetting      ContextKey = "channel_other_setting"
 	ContextKeyChannelParamOverride     ContextKey = "param_override"
+
+	// Failover context keys
+	ContextKeyFailoverMaxRetries  ContextKey = "failover_max_retries"
+	ContextKeyFailoverMaxSwitches ContextKey = "failover_max_switches"
+
+	// Idempotency context keys
+	ContextKeyIdempotencyKey     ContextKey = "idempotency_key"
+	ContextKeyIdempotencyReplay  ContextKey = "idempotency_replay"
+
+	// Content moderation context keys
+	ContextKeyContentModerationEnabled ContextKey = "content_moderation_enabled"
+	ContextKeyContentModerationMode    ContextKey = "content_moderation_mode"
+
 	ContextKeyChannelHeaderOverride    ContextKey = "header_override"
 	ContextKeyChannelOrganization      ContextKey = "channel_organization"
 	ContextKeyChannelAutoBan           ContextKey = "auto_ban"

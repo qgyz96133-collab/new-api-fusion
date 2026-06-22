@@ -190,10 +190,6 @@ const endpointTypeOptions: Array<{ value: string; label: string }> = [
   { value: 'embeddings', label: 'Embeddings (/v1/embeddings)' },
 ]
 
-const endpointSelectContentClass = 'w-[460px] max-w-[calc(100vw-2rem)]'
-const endpointSelectItemClass =
-  'items-start py-2 [&_[data-slot=select-item-text]]:min-w-0 [&_[data-slot=select-item-text]]:shrink [&_[data-slot=select-item-text]]:whitespace-normal'
-
 const STREAM_INCOMPATIBLE_ENDPOINTS = new Set([
   'embeddings',
   'image-generation',
@@ -931,26 +927,14 @@ function ChannelTestDialogContent({
                 value={endpointType}
                 onValueChange={handleEndpointTypeChange}
               >
-                <SelectTrigger id='endpoint-type' className='w-full min-w-0'>
-                  <SelectValue
-                    className='min-w-0 truncate'
-                    placeholder={t('Auto detect (default)')}
-                  />
+                <SelectTrigger id='endpoint-type'>
+                  <SelectValue placeholder={t('Auto detect (default)')} />
                 </SelectTrigger>
-                <SelectContent
-                  alignItemWithTrigger={false}
-                  className={endpointSelectContentClass}
-                >
+                <SelectContent alignItemWithTrigger={false}>
                   <SelectGroup>
                     {endpointSelectItems.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className={endpointSelectItemClass}
-                      >
-                        <span className='min-w-0 whitespace-normal break-words leading-snug'>
-                          {option.label}
-                        </span>
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -1094,7 +1078,11 @@ function ChannelTestDialogContent({
               <DataTablePagination table={table} />
             </div>
 
-            <TestModelsBulkActions table={table} />
+            <TestModelsBulkActions
+              table={table}
+              onTestSelected={handleBatchTest}
+              isBatchTesting={isBatchTesting}
+            />
           </div>
         </div>
       </Dialog>
@@ -1345,8 +1333,12 @@ function FailureDetailsSheet({
 
 function TestModelsBulkActions({
   table,
+  onTestSelected,
+  isBatchTesting,
 }: {
   table: TanStackTable<ModelRow>
+  onTestSelected: (models: string[]) => void
+  isBatchTesting: boolean
 }) {
   const { t } = useTranslation()
   const { copyToClipboard } = useCopyToClipboard()
@@ -1358,8 +1350,30 @@ function TestModelsBulkActions({
     void copyToClipboard(selectedModels.join(','))
   }, [copyToClipboard, selectedModels])
 
+  const handleTestSelected = useCallback(() => {
+    if (selectedModels.length === 0) return
+    onTestSelected(selectedModels)
+  }, [onTestSelected, selectedModels])
+
   return (
     <BulkActionsToolbar table={table} entityName='model'>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              size='sm'
+              onClick={handleTestSelected}
+              disabled={selectedModels.length === 0 || isBatchTesting}
+            />
+          }
+        >
+          <CheckCircle2 data-icon='inline-start' />
+          {t('Test {{count}} selected', { count: selectedModels.length })}
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{t('Test selected models')}</p>
+        </TooltipContent>
+      </Tooltip>
       <Tooltip>
         <TooltipTrigger
           render={

@@ -11,11 +11,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SmartRouterIface abstracts relay.SmartRouter to break the service → relay import cycle.
+type SmartRouterIface interface {
+	SelectHealthyChannel(channels []*model.Channel) *model.Channel
+	GetChannelHealthScore(channelID int) float64
+}
+
+// GetSmartRouterFunc is injected by main.go to return the global SmartRouter instance.
+// This breaks the service → relay → relay/channel → service circular import.
+var GetSmartRouterFunc func() SmartRouterIface
+
 type RetryParam struct {
 	Ctx          *gin.Context
 	TokenGroup   string
 	ModelName    string
-	RequestPath  string
 	Retry        *int
 	resetNextTry bool
 }
@@ -48,40 +57,24 @@ func (p *RetryParam) ResetRetryNextTry() {
 
 // CacheGetRandomSatisfiedChannel tries to get a random channel that satisfies the requirements.
 // 尝试获取一个满足要求的随机渠道。
-//
-// For "auto" tokenGroup with cross-group Retry enabled:
-// 对于启用了跨分组重试的 "auto" tokenGroup：
-//
-//   - Each group will exhaust all its priorities before moving to the next group.
-//     每个分组会用完所有优先级后才会切换到下一个分组。
-//
-//   - Uses ContextKeyAutoGroupIndex to track current group index.
-//     使用 ContextKeyAutoGroupIndex 跟踪当前分组索引。
-//
-//   - Uses ContextKeyAutoGroupRetryIndex to track the global Retry count when current group started.
-//     使用 ContextKeyAutoGroupRetryIndex 跟踪当前分组开始时的全局重试次数。
-//
-//   - priorityRetry = Retry - startRetryIndex, represents the priority level within current group.
-//     priorityRetry = Retry - startRetryIndex，表示当前分组内的优先级级别。
-//
-//   - When GetRandomSatisfiedChannel returns nil (priorities exhausted), moves to next group.
-//     当 GetRandomSatisfiedChannel 返回 nil（优先级用完）时，切换到下一个分组。
-//
-// Example flow (2 groups, each with 2 priorities, RetryTimes=3):
-// 示例流程（2个分组，每个有2个优先级，RetryTimes=3）：
-//
-//	Retry=0: GroupA, priority0 (startRetryIndex=0, priorityRetry=0)
-//	         分组A, 优先级0
-//
-//	Retry=1: GroupA, priority1 (startRetryIndex=0, priorityRetry=1)
-//	         分组A, 优先级1
-//
-//	Retry=2: GroupA exhausted → GroupB, priority0 (startRetryIndex=2, priorityRetry=0)
-//	         分组A用完 → 分组B, 优先级0
-//
-//	Retry=3: GroupB, priority1 (startRetryIndex=2, priorityRetry=1)
-//	         分组B, 优先级1
+// Now integrated with SmartRouter for health-aware routing.
+// 现已集成 SmartRouter 以实现健康感知路由。
 func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, error) {
+	// Try SmartRouter first for health-aware selection
+	var smartRouter SmartRouterIface
+	if GetSmartRouterFunc != nil {
+		smartRouter = GetSmartRouterFunc()
+	}
+	if smartRouter != nil {
+		channel, group, err := selectChannelWithSmartRouter(param, smartRouter)
+		if channel != nil || err != nil {
+			return channel, group, err
+		}
+		// If SmartRouter returns nil but no error, fall back to original logic
+		logger.LogDebug(param.Ctx, "SmartRouter returned no channel, falling back to original logic")
+	}
+
+	// Original logic (fallback)
 	var channel *model.Channel
 	var err error
 	selectGroup := param.TokenGroup
@@ -116,7 +109,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 			logger.LogDebug(param.Ctx, "Auto selecting group: %s, priorityRetry: %d", autoGroup, priorityRetry)
 
-			channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry, param.RequestPath)
+			channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry)
 			if channel == nil {
 				// Current group has no available channel for this model, try next group
 				// 当前分组没有该模型的可用渠道，尝试下一个分组
@@ -154,10 +147,83 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			break
 		}
 	} else {
-		channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry(), param.RequestPath)
+		channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
 		if err != nil {
 			return nil, param.TokenGroup, err
 		}
 	}
 	return channel, selectGroup, nil
+}
+
+// selectChannelWithSmartRouter uses SmartRouter for health-aware channel selection
+// 使用 SmartRouter 进行健康感知的渠道选择
+func selectChannelWithSmartRouter(param *RetryParam, smartRouter SmartRouterIface) (*model.Channel, string, error) {
+	// Get all channels for the model and group
+	var channels []*model.Channel
+
+	if param.TokenGroup == "auto" {
+		userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
+		autoGroups := GetUserAutoGroup(userGroup)
+		if len(autoGroups) == 0 {
+			return nil, param.TokenGroup, nil // No error, just no channels
+		}
+
+		// Collect channels from all auto groups using GetAllChannels
+		allChannels, _ := model.GetAllChannels(0, 0, true, false)
+		for _, ch := range allChannels {
+			if ch.Status != 1 {
+				continue
+			}
+			// Check if channel supports the model and any of the auto groups
+			for _, group := range autoGroups {
+				if model.IsChannelEnabledForGroupModel(group, param.ModelName, ch.Id) {
+					channels = append(channels, ch)
+					break
+				}
+			}
+		}
+	} else {
+		// Get all channels and filter by group and model
+		allChannels, err := model.GetAllChannels(0, 0, true, false)
+		if err != nil {
+			return nil, param.TokenGroup, err
+		}
+		for _, ch := range allChannels {
+			if ch.Status != 1 {
+				continue
+			}
+			if model.IsChannelEnabledForGroupModel(param.TokenGroup, param.ModelName, ch.Id) {
+				channels = append(channels, ch)
+			}
+		}
+	}
+
+	if len(channels) == 0 {
+		return nil, param.TokenGroup, nil // No error, just no channels
+	}
+
+	// Filter channels by priority (if retry is set)
+	if param.GetRetry() > 0 {
+		filtered := make([]*model.Channel, 0)
+		for _, ch := range channels {
+			if ch.Priority != nil && int(*ch.Priority) >= param.GetRetry() {
+				filtered = append(filtered, ch)
+			}
+		}
+		if len(filtered) > 0 {
+			channels = filtered
+		}
+	}
+
+	// Use SmartRouter to select based on health
+	selected := smartRouter.SelectHealthyChannel(channels)
+	if selected == nil {
+		// All channels unhealthy, return nil to fall back to original logic
+		return nil, param.TokenGroup, nil
+	}
+
+	logger.LogDebug(param.Ctx, "SmartRouter selected channel %d (health score: %.2f) for model %s",
+		selected.Id, smartRouter.GetChannelHealthScore(selected.Id), param.ModelName)
+
+	return selected, param.TokenGroup, nil
 }

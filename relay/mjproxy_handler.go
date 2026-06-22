@@ -298,7 +298,14 @@ func RelayMidjourneyTaskImageSeed(c *gin.Context) *dto.MidjourneyResponse {
 		return service.MidjourneyErrorWrapper(constant.MjRequestError, "该任务所属渠道已被禁用")
 	}
 	c.Set("channel_id", originTask.ChannelId)
-	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	// Fix: Pick a single key for multi-key channels
+	mjKey := channel.Key
+	if channel.ChannelInfo.IsMultiKey {
+		if k, _, err := channel.GetNextEnabledKey(); err == nil && k != "" {
+			mjKey = k
+		}
+	}
+	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", mjKey))
 
 	requestURL := getMjRequestPath(c.Request.URL.String())
 	fullRequestURL := fmt.Sprintf("%s%s", channel.GetBaseURL(), requestURL)
@@ -473,7 +480,14 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 			}
 			c.Set("base_url", channel.GetBaseURL())
 			c.Set("channel_id", originTask.ChannelId)
-			c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+			// Fix: Pick a single key for multi-key channels
+			mjKey := channel.Key
+			if channel.ChannelInfo.IsMultiKey {
+				if k, _, err := channel.GetNextEnabledKey(); err == nil && k != "" {
+					mjKey = k
+				}
+			}
+			c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", mjKey))
 			logger.LogDebug(c, "Midjourney action uses origin channel: id=%s, base_url=%s", strconv.Itoa(originTask.ChannelId), channel.GetBaseURL())
 		}
 		midjRequest.Prompt = originTask.Prompt

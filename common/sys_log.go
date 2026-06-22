@@ -14,18 +14,30 @@ import (
 // acquire Lock when swapping writers and closing old files.
 var LogWriterMu sync.RWMutex
 
+// ConsoleLogPublisher is an optional callback to publish logs to the Ops Dashboard SSE stream.
+// It is set by the controller package to avoid a circular import.
+var ConsoleLogPublisher func(line string)
+
 func SysLog(s string) {
 	t := time.Now()
+	formatted := fmt.Sprintf("[SYS] %v | %s", t.Format("2006/01/02 - 15:04:05"), s)
 	LogWriterMu.RLock()
-	_, _ = fmt.Fprintf(gin.DefaultWriter, "[SYS] %v | %s \n", t.Format("2006/01/02 - 15:04:05"), s)
+	_, _ = fmt.Fprintf(gin.DefaultWriter, "%s \n", formatted)
 	LogWriterMu.RUnlock()
+	if ConsoleLogPublisher != nil {
+		ConsoleLogPublisher(formatted)
+	}
 }
 
 func SysError(s string) {
 	t := time.Now()
+	formatted := fmt.Sprintf("[SYS] %v | %s", t.Format("2006/01/02 - 15:04:05"), s)
 	LogWriterMu.RLock()
-	_, _ = fmt.Fprintf(gin.DefaultErrorWriter, "[SYS] %v | %s \n", t.Format("2006/01/02 - 15:04:05"), s)
+	_, _ = fmt.Fprintf(gin.DefaultErrorWriter, "%s \n", formatted)
 	LogWriterMu.RUnlock()
+	if ConsoleLogPublisher != nil {
+		ConsoleLogPublisher(formatted)
+	}
 }
 
 func FatalLog(v ...any) {

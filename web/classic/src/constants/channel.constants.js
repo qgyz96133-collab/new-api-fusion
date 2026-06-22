@@ -22,12 +22,12 @@ export const CHANNEL_OPTIONS = [
   {
     value: 2,
     color: 'light-blue',
-    label: 'MjProxy',
+    label: 'Midjourney Proxy',
   },
   {
     value: 5,
     color: 'blue',
-    label: 'MjProxyPlus',
+    label: 'Midjourney Proxy Plus',
   },
   {
     value: 36,

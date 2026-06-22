@@ -36,6 +36,17 @@ const (
 	APITypeMiniMax
 	APITypeReplicate
 	APITypeCodex
-	APITypeAdvancedCustom
+	APITypeQoder
+	APITypeMimo
+	APITypeKiro
+	APITypeGeminiCLI
+	APITypeAntigravity
+	APITypeGrokCLI
+	APITypeJoyCode
+	APITypeCursor
+	APITypeGitHubCopilot
+	APITypeXiaomiTokenPlan
+	APITypeCommandCode
+	APITypeChatGPT2API
 	APITypeDummy // this one is only for count, do not add any channel after this
 )

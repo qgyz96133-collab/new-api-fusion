@@ -209,7 +209,7 @@ function CommonLogsCard<TData>({
         <SummaryField
           label={t('Channel')}
           cell={cells.get('channel')}
-          valueClassName='[&_.flex-col]:max-w-none'
+          primaryOnly
         />
         <SummaryField label={t('User')} cell={cells.get('user')} primaryOnly />
         <SummaryField

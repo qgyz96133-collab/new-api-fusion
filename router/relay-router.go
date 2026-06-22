@@ -70,8 +70,20 @@ func SetRelayRouter(router *gin.Engine) {
 	relayV1Router.Use(middleware.RouteTag("relay"))
 	relayV1Router.Use(middleware.SystemPerformanceCheck())
 	relayV1Router.Use(middleware.TokenAuth())
+	relayV1Router.Use(middleware.Idempotency())
+	relayV1Router.Use(middleware.ContentModeration())
 	relayV1Router.Use(middleware.ModelRequestRateLimit())
 	{
+		// Search API
+		searchRouter := relayV1Router.Group("")
+		searchRouter.Use(middleware.Distribute())
+		searchRouter.POST("/search", relay.HandleSearch)
+
+		// Web Fetch API
+		webFetchRouter := relayV1Router.Group("")
+		webFetchRouter.Use(middleware.Distribute())
+		webFetchRouter.POST("/web/fetch", relay.HandleWebFetch)
+
 		// WebSocket 路由（统一到 Relay）
 		wsRouter := relayV1Router.Group("")
 		wsRouter.Use(middleware.Distribute())

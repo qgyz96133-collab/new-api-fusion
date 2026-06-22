@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"embed"
 	"fmt"
 	"log"
@@ -97,6 +98,9 @@ func main() {
 		go model.SyncChannelCache(common.SyncFrequency)
 	}
 
+	// Start credential auto-refresh task
+	service.StartCredentialRefreshTask()
+
 	// 热更新配置
 	go model.SyncOptions(common.SyncFrequency)
 
@@ -128,8 +132,73 @@ func main() {
 		return a
 	}
 
+	// Wire SmartRouter to break service -> relay -> relay/channel -> service circular import
+	service.GetSmartRouterFunc = func() service.SmartRouterIface {
+		return relay.GetGlobalSmartRouter()
+	}
+
 	// Channel upstream model update check task
 	controller.StartChannelUpstreamModelUpdateTask()
+
+	// Usage cleanup worker (ported from sub2api)
+	service.StartUsageCleanupWorker()
+
+	// Channel monitor scheduler (ported from sub2api)
+	service.StartChannelMonitorScheduler()
+
+	// Ops Alert evaluator periodic task
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			// Alert evaluation will be implemented when alert system is fully integrated
+			// For now, just log that the ticker is running
+			if common.DebugEnabled {
+				common.SysLog("[OpsAlert] Evaluator ticker running")
+			}
+		}
+	}()
+
+	// Load Error Passthrough rules into cache at startup
+	if err := model.GetErrorPassthroughService().ReloadRules(); err != nil {
+		common.SysError("failed to load error passthrough rules: " + err.Error())
+	} else {
+		common.SysLog("Error Passthrough rules loaded")
+	}
+
+	// Load Prompt Replacement rules at startup
+	go func() {
+		common.OptionMapRWMutex.RLock()
+		rulesJSON := common.OptionMap["prompt_replacement_rules"]
+		common.OptionMapRWMutex.RUnlock()
+
+		if rulesJSON != "" {
+			var data struct {
+				Rules []struct {
+					Old string `json:"old"`
+					New string `json:"new"`
+				} `json:"rules"`
+				Mode string `json:"mode"`
+			}
+			if err := json.Unmarshal([]byte(rulesJSON), &data); err == nil {
+				rules := make([]controller.PromptReplacementRule, len(data.Rules))
+				for i, r := range data.Rules {
+					rules[i] = controller.PromptReplacementRule{Old: r.Old, New: r.New}
+				}
+				if data.Mode == "" {
+					data.Mode = "overwrite"
+				}
+				controller.SetPromptReplacementRules(rules, data.Mode)
+				common.SysLog(fmt.Sprintf("Prompt Replacement rules loaded: %d rules, mode=%s", len(rules), data.Mode))
+			} else {
+				common.SysError("failed to parse prompt replacement rules: " + err.Error())
+			}
+		}
+	}()
+
+	// Initialize model capabilities database (ported from 9router)
+	service.InitDefaultCapabilities()
+
 
 	if common.IsMasterNode && constant.UpdateTask {
 		gopool.Go(func() {
@@ -288,6 +357,31 @@ func InitResources() error {
 
 	// Initialize options, should after model.InitDB()
 	model.InitOptionMap()
+
+	// Wire console log publisher for Ops Dashboard SSE
+	common.ConsoleLogPublisher = controller.PublishConsoleLog
+
+	// Restore uTLS settings from database on startup
+	common.OptionMapRWMutex.RLock()
+	utlsEnabledVal := common.OptionMap["utls_enabled"]
+	utlsFingerprintVal := common.OptionMap["utls_fingerprint"]
+	common.OptionMapRWMutex.RUnlock()
+	if utlsEnabledVal == "true" {
+		if utlsFingerprintVal == "" {
+			utlsFingerprintVal = "chrome"
+		}
+		fpType := common.FingerprintChrome
+		switch strings.ToLower(utlsFingerprintVal) {
+		case "firefox":
+			fpType = common.FingerprintFirefox
+		case "safari":
+			fpType = common.FingerprintSafari
+		case "edge":
+			fpType = common.FingerprintEdge
+		}
+		service.EnableUTLS(fpType)
+		common.SysLog("uTLS transport restored from DB: fingerprint=" + utlsFingerprintVal)
+	}
 
 	// 清理旧的磁盘缓存文件
 	common.CleanupOldCacheFiles()

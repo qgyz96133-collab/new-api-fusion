@@ -5,14 +5,20 @@ import (
 
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/advancedcustom"
 	"github.com/QuantumNous/new-api/relay/channel/ali"
+	"github.com/QuantumNous/new-api/relay/channel/antigravity"
 	"github.com/QuantumNous/new-api/relay/channel/aws"
 	"github.com/QuantumNous/new-api/relay/channel/baidu"
 	"github.com/QuantumNous/new-api/relay/channel/baidu_v2"
 	"github.com/QuantumNous/new-api/relay/channel/claude"
 	"github.com/QuantumNous/new-api/relay/channel/cloudflare"
 	"github.com/QuantumNous/new-api/relay/channel/codex"
+	"github.com/QuantumNous/new-api/relay/channel/gemini_cli"
+	"github.com/QuantumNous/new-api/relay/channel/grok_cli"
+	"github.com/QuantumNous/new-api/relay/channel/kiro"
+	"github.com/QuantumNous/new-api/relay/channel/mimo"
+	"github.com/QuantumNous/new-api/relay/channel/qoder"
+	"github.com/QuantumNous/new-api/relay/channel/task/agnes"
 	"github.com/QuantumNous/new-api/relay/channel/cohere"
 	"github.com/QuantumNous/new-api/relay/channel/coze"
 	"github.com/QuantumNous/new-api/relay/channel/deepseek"
@@ -48,6 +54,12 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/xunfei"
 	"github.com/QuantumNous/new-api/relay/channel/zhipu"
 	"github.com/QuantumNous/new-api/relay/channel/zhipu_4v"
+	"github.com/QuantumNous/new-api/relay/channel/xiaomi_tokenplan"
+	"github.com/QuantumNous/new-api/relay/channel/joycode"
+	"github.com/QuantumNous/new-api/relay/channel/github_copilot"
+	"github.com/QuantumNous/new-api/relay/channel/cursor"
+	"github.com/QuantumNous/new-api/relay/channel/chatgpt2api"
+	"github.com/QuantumNous/new-api/relay/channel/commandcode"
 	"github.com/gin-gonic/gin"
 )
 
@@ -121,8 +133,30 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &replicate.Adaptor{}
 	case constant.APITypeCodex:
 		return &codex.Adaptor{}
-	case constant.APITypeAdvancedCustom:
-		return &advancedcustom.Adaptor{}
+	case constant.APITypeQoder:
+		return &qoder.Adaptor{}
+	case constant.APITypeMimo:
+		return &mimo.Adaptor{}
+	case constant.APITypeKiro:
+		return &kiro.Adaptor{}
+	case constant.APITypeGeminiCLI:
+		return &gemini_cli.Adaptor{}
+	case constant.APITypeAntigravity:
+		return &antigravity.Adaptor{}
+	case constant.APITypeGrokCLI:
+		return &grok_cli.Adaptor{}
+	case constant.APITypeJoyCode:
+		return &joycode.Adaptor{}
+	case constant.APITypeCursor:
+		return &cursor.Adaptor{}
+	case constant.APITypeGitHubCopilot:
+		return &github_copilot.Adaptor{}
+	case constant.APITypeXiaomiTokenPlan:
+		return &xiaomi_tokenplan.Adaptor{}
+	case constant.APITypeCommandCode:
+		return &commandcode.Adaptor{}
+	case constant.APITypeChatGPT2API:
+		return &chatgpt2api.Adaptor{}
 	}
 	return nil
 }
@@ -158,6 +192,8 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 			return &taskdoubao.TaskAdaptor{}
 		case constant.ChannelTypeSora, constant.ChannelTypeOpenAI:
 			return &tasksora.TaskAdaptor{}
+		case constant.ChannelTypeAgnes:
+			return &agnes.TaskAdaptor{}
 		case constant.ChannelTypeGemini:
 			return &taskGemini.TaskAdaptor{}
 		case constant.ChannelTypeMiniMax:

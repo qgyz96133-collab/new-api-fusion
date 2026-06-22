@@ -107,8 +107,13 @@ func logHelper(ctx context.Context, level string, msg string) {
 	if level == loggerINFO {
 		writer = gin.DefaultWriter
 	}
-	_, _ = fmt.Fprintf(writer, "[%s] %v | %s | %s \n", level, now.Format("2006/01/02 - 15:04:05"), id, msg)
+	logLine := fmt.Sprintf("[%s] %v | %s | %s", level, now.Format("2006/01/02 - 15:04:05"), id, msg)
+	_, _ = fmt.Fprintf(writer, "%s \n", logLine)
 	common.LogWriterMu.RUnlock()
+	// Publish to Ops Dashboard SSE console log
+	if common.ConsoleLogPublisher != nil {
+		common.ConsoleLogPublisher(logLine)
+	}
 	logCount++ // we don't need accurate count, so no lock here
 	if logCount > maxLogCount && !setupLogWorking {
 		logCount = 0

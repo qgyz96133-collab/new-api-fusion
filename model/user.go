@@ -1081,3 +1081,22 @@ func RootUserExists() bool {
 	}
 	return true
 }
+
+
+// FindUserByDingTalkID finds a user by DingTalk OpenID (stored in remark field)
+func FindUserByDingTalkID(openID string) *User {
+	var user User
+	if err := DB.Where("remark LIKE ?", "%dingtalk:"+openID+"%").First(&user).Error; err != nil {
+		return nil
+	}
+	return &user
+}
+
+// FindUserByWeComID finds a user by WeCom UserID (stored in remark field)
+func FindUserByWeComID(userID string) *User {
+	var user User
+	if err := DB.Where("remark LIKE ?", "%wecom:"+userID+"%").First(&user).Error; err != nil {
+		return nil
+	}
+	return &user
+}

@@ -56,7 +56,7 @@ import {
   Qingyan,
   DeepSeek,
   Qwen,
-  Midjourney as MjProxyIcon,
+  Midjourney,
   Grok,
   AzureAI,
   Hunyuan,
@@ -309,7 +309,7 @@ const Home = () => {
                       <Qwen.Color size={40} />
                     </div>
                     <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <MjProxyIcon size={40} />
+                      <Midjourney size={40} />
                     </div>
                     <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
                       <Grok size={40} />

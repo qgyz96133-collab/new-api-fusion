@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/gemini"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
+	"github.com/QuantumNous/new-api/relay/rtk"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/types"
@@ -160,6 +161,14 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			if err != nil {
 				return newAPIErrorFromParamOverride(err)
 			}
+		}
+
+		// Apply translation fixes and RTK compression (best-effort, non-fatal)
+		enableRTK := rtk.IsEnabled()
+		cavemanLevel := int(rtk.GetCavemanLevel())
+		fixedData, fixErr := ApplyAllFixes(jsonData, "gemini", info.OriginModelName, enableRTK, cavemanLevel)
+		if fixErr == nil {
+			jsonData = fixedData
 		}
 
 		logger.LogDebug(c, "Gemini request body: %s", jsonData)

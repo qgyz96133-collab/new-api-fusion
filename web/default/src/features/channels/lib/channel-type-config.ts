@@ -134,14 +134,144 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
       baseUrl: 'Default: https://api.replicate.com',
     },
   },
-  58: {
-    id: 58,
-    name: CHANNEL_TYPES[58],
-    icon: 'newapi',
+  // Free Tier Providers (from 9router/AIClient2API)
+  65: {
+    id: 65,
+    name: 'Kiro AI (Free)',
+    icon: 'kiro',
+    defaultBaseUrl: 'https://codewhisperer.us-east-1.amazonaws.com',
     hints: {
-      baseUrl: 'Fallback base URL',
-      key: 'Used by route auth templates',
-      models: 'Models exposed by this channel',
+      key: 'AWS SSO OAuth Token (use Kiro OAuth flow to obtain)',
+      models: 'claude-haiku-4-5,claude-sonnet-4-5,claude-sonnet-4-6,claude-opus-4-5,claude-opus-4-6,claude-opus-4-7,claude-opus-4-8',
+    },
+  },
+  66: {
+    id: 66,
+    name: 'MiMo Code Free',
+    icon: 'mimo',
+    defaultBaseUrl: 'https://api.xiaomimimo.com/api/free-ai/openai/chat',
+    hints: {
+      key: 'No API key needed. Enter "free" as placeholder.',
+      models: 'mimo-auto',
+    },
+  },
+  67: {
+    id: 67,
+    name: 'Qoder',
+    icon: 'qoder',
+    defaultBaseUrl: 'https://api.qoder.com/v1',
+    hints: {
+      key: 'OAuth Token (use Connect Qoder button to authorize)',
+      models: 'qoder-auto,gpt-4o,claude-sonnet-4',
+    },
+  },
+  68: {
+    id: 68,
+    name: 'Agnes',
+    icon: 'agnes',
+    defaultBaseUrl: 'https://apihub.agnes-ai.com',
+    hints: {
+      key: 'Agnes API Key',
+      models: 'agnes-video-v2.0,agnes-video-v2.0-fast',
+    },
+  },
+  69: {
+    id: 69,
+    name: 'Gemini CLI',
+    icon: 'google',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com',
+    hints: {
+      key: 'Gemini API Key',
+      models: 'gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-pro,gemini-1.5-flash',
+    },
+  },
+  70: {
+    id: 70,
+    name: 'Antigravity',
+    icon: 'google',
+    defaultBaseUrl: 'https://daily-cloudcode-pa.googleapis.com',
+    hints: {
+      key: 'Google OAuth Token',
+      models: 'gemini-3-flash,gemini-3-pro-high,gemini-pro-agent,claude-sonnet-4-6',
+    },
+  },
+  71: {
+    id: 71,
+    name: 'Grok CLI',
+    icon: 'xai',
+    defaultBaseUrl: 'https://api.x.ai',
+    hints: {
+      key: 'xAI OAuth Token',
+      models: 'grok-3,grok-3-mini,grok-4,grok-4.1-thinking',
+    },
+  },
+  58: { id: 58, name: 'Tavily', icon: 'tavily', defaultBaseUrl: 'https://api.tavily.com', hints: { key: 'Tavily API Key (tvly-...)' } },
+  59: { id: 59, name: 'Brave Search', icon: 'brave', defaultBaseUrl: 'https://api.search.brave.com', hints: { key: 'Brave Search API Key' } },
+  60: { id: 60, name: 'Serper', icon: 'serper', defaultBaseUrl: 'https://google.serper.dev', hints: { key: 'Serper API Key' } },
+  61: { id: 61, name: 'Exa', icon: 'exa', defaultBaseUrl: 'https://api.exa.ai', hints: { key: 'Exa API Key' } },
+  62: { id: 62, name: 'SearXNG', icon: 'searxng', hints: { baseUrl: 'Your SearXNG instance URL' } },
+  63: { id: 63, name: 'Jina Reader', icon: 'jina', defaultBaseUrl: 'https://r.jina.ai', hints: { key: 'Jina API Key (optional)' } },
+  64: { id: 64, name: 'Firecrawl', icon: 'firecrawl', defaultBaseUrl: 'https://api.firecrawl.dev', hints: { key: 'Firecrawl API Key (fc-...)' } },
+  72: {
+    id: 72,
+    name: 'JoyCode (JD)',
+    icon: 'joycode',
+    defaultBaseUrl: 'https://joycode.jd.com',
+    hints: {
+      key: 'OAuth 2.0 Bearer Token',
+      models: 'coder-model,vision-model,qwen3-coder-plus,qwen3-coder-flash',
+    },
+  },
+  73: {
+    id: 73,
+    name: 'Cursor',
+    icon: 'cursor',
+    defaultBaseUrl: 'https://api2.cursor.sh',
+    hints: {
+      key: 'Cursor session token',
+      models: 'gpt-4o,claude-sonnet-4,claude-opus-4,cursor-small,o3-mini',
+    },
+  },
+  74: {
+    id: 74,
+    name: 'GitHub Copilot',
+    icon: 'github',
+    defaultBaseUrl: 'https://api.githubcopilot.com',
+    hints: {
+      key: 'Copilot token (from VS Code subscription)',
+      models: 'gpt-4o,gpt-5,claude-sonnet-4,o4-mini,o1',
+    },
+  },
+  75: {
+    id: 75,
+    name: 'Xiaomi TokenPlan',
+    icon: 'xiaomi',
+    defaultBaseUrl: 'https://api.xiaomimimo.com',
+    hints: {
+      key: 'Bearer token from Xiaomi TokenPlan',
+      models: 'claude-sonnet-4,claude-opus-4,claude-haiku-4.5,mimo-v2.5-pro',
+    },
+  },
+  76: {
+    id: 76,
+    name: 'CommandCode',
+    icon: 'commandcode',
+    defaultBaseUrl: 'https://api.commandcode.ai',
+    hints: {
+      key: 'API Key (format: user_xxx)',
+      models: 'commandcode-default',
+    },
+  },
+  77: {
+    id: 77,
+    name: 'ChatGPT2API (Free Web)',
+    icon: 'openai',
+    defaultBaseUrl: 'http://localhost:3000',
+    hints: {
+      baseUrl: 'ChatGPT2API sidecar URL (e.g. http://chatgpt2api:80)',
+      key: 'Auth key from chatgpt2api config.json',
+      models: 'gpt-4o,gpt-5,gpt-image-2,auto (models auto-detected from sidecar)',
+      other: 'Deploy chatgpt2api as Docker sidecar: docker compose up -d',
     },
   },
 }
@@ -205,4 +335,5 @@ export function validateKeyFormat(type: number, key: string): boolean {
   }
 
   return true
+
 }

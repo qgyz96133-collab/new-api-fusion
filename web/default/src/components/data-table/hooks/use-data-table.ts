@@ -20,6 +20,7 @@ import * as React from 'react'
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type ColumnSizingState,
   type ExpandedState,
   type OnChangeFn,
   type PaginationState,
@@ -55,7 +56,6 @@ type DataTableStateOptions = {
   sorting?: SortingState
   onSortingChange?: OnChangeFn<SortingState>
   initialColumnVisibility?: VisibilityState
-  columnVisibilityStorageKey?: string | false
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
   initialRowSelection?: RowSelectionState
@@ -66,6 +66,9 @@ type DataTableStateOptions = {
   onExpandedChange?: OnChangeFn<ExpandedState>
   columnFilters?: ColumnFiltersState
   onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>
+  initialColumnSizing?: ColumnSizingState
+  columnSizing?: ColumnSizingState
+  onColumnSizingChange?: OnChangeFn<ColumnSizingState>
   globalFilter?: string
   onGlobalFilterChange?: OnChangeFn<string>
   initialPagination?: PaginationState
@@ -123,32 +126,6 @@ function useControllableTableState<TValue>(
   return [value, setValue]
 }
 
-function readColumnVisibility(storageKey: string | undefined): VisibilityState {
-  if (!storageKey || typeof window === 'undefined') return {}
-
-  try {
-    const raw = window.localStorage.getItem(storageKey)
-    if (!raw) return {}
-
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {}
-    }
-
-    return Object.entries(parsed).reduce<VisibilityState>(
-      (visibility, [key, value]) => {
-        if (typeof value === 'boolean') {
-          visibility[key] = value
-        }
-        return visibility
-      },
-      {}
-    )
-  } catch {
-    return {}
-  }
-}
-
 export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
   const {
     data,
@@ -171,18 +148,6 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     withExpandedRowModel = false,
   } = options
 
-  const columnVisibilityStorageKey =
-    typeof options.columnVisibilityStorageKey === 'string'
-      ? options.columnVisibilityStorageKey
-      : undefined
-  const resolvedInitialColumnVisibility = React.useMemo(
-    () => ({
-      ...initialColumnVisibility,
-      ...readColumnVisibility(columnVisibilityStorageKey),
-    }),
-    [columnVisibilityStorageKey, initialColumnVisibility]
-  )
-
   const [sorting, onSortingChange] = useControllableTableState(
     options.sorting,
     initialSorting,
@@ -191,13 +156,9 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
   const [columnVisibility, onColumnVisibilityChange] =
     useControllableTableState(
       options.columnVisibility,
-      resolvedInitialColumnVisibility,
+      initialColumnVisibility,
       options.onColumnVisibilityChange
     )
-  const hydratedColumnVisibilityStorageKeyRef = React.useRef(
-    columnVisibilityStorageKey
-  )
-  const skipNextColumnVisibilityPersistRef = React.useRef(false)
   const [rowSelection, onRowSelectionChange] = useControllableTableState(
     options.rowSelection,
     initialRowSelection,
@@ -212,6 +173,11 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     options.pagination,
     initialPagination,
     options.onPaginationChange
+  )
+  const [columnSizing, onColumnSizingChange] = useControllableTableState(
+    options.columnSizing,
+    options.initialColumnSizing ?? {},
+    options.onColumnSizingChange
   )
 
   const resolvedPageCount =
@@ -231,9 +197,11 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
       rowSelection,
       expanded,
       columnFilters: options.columnFilters,
+      columnSizing,
       globalFilter: options.globalFilter,
       pagination,
     },
+    enableColumnResizing: true,
     enableRowSelection: options.enableRowSelection,
     getRowId: options.getRowId,
     getSubRows: options.getSubRows,
@@ -245,6 +213,7 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     onSortingChange,
     onColumnVisibilityChange,
     onRowSelectionChange,
+    onColumnSizingChange,
     onExpandedChange,
     onColumnFiltersChange: options.onColumnFiltersChange,
     onGlobalFilterChange: options.onGlobalFilterChange,
@@ -270,43 +239,6 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
   React.useEffect(() => {
     ensurePageInRange?.(actualPageCount)
   }, [actualPageCount, ensurePageInRange])
-
-  React.useEffect(() => {
-    if (
-      options.columnVisibility !== undefined ||
-      columnVisibilityStorageKey ===
-        hydratedColumnVisibilityStorageKeyRef.current
-    ) {
-      return
-    }
-
-    hydratedColumnVisibilityStorageKeyRef.current = columnVisibilityStorageKey
-    skipNextColumnVisibilityPersistRef.current = true
-    onColumnVisibilityChange(() => resolvedInitialColumnVisibility)
-  }, [
-    columnVisibilityStorageKey,
-    onColumnVisibilityChange,
-    options.columnVisibility,
-    resolvedInitialColumnVisibility,
-  ])
-
-  React.useEffect(() => {
-    if (!columnVisibilityStorageKey || typeof window === 'undefined') return
-
-    if (skipNextColumnVisibilityPersistRef.current) {
-      skipNextColumnVisibilityPersistRef.current = false
-      return
-    }
-
-    try {
-      window.localStorage.setItem(
-        columnVisibilityStorageKey,
-        JSON.stringify(columnVisibility)
-      )
-    } catch {
-      // Storage can be unavailable in private mode; table controls still work.
-    }
-  }, [columnVisibility, columnVisibilityStorageKey])
 
   return {
     table,

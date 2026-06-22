@@ -51,7 +51,26 @@ export function DataTableHeader<TData>({
               className={getColumnClassName?.(header.column.id, 'header')}
               style={applyHeaderSize ? { width: header.getSize() } : undefined}
             >
-              {renderHeaderContent(header)}
+              <div className="flex items-center">
+                <div className="min-w-0 flex-1">
+                  {renderHeaderContent(header)}
+                </div>
+                {/* Column resize handle */}
+                {header.column.getCanResize() && (
+                  <div
+                    onMouseDown={header.getResizeHandler()}
+                    onTouchStart={header.getResizeHandler()}
+                    className={`
+                      resizer ml-1 h-4 w-1 cursor-col-resize select-none
+                      rounded-full transition-colors
+                      ${header.column.getIsResizing()
+                        ? 'bg-primary'
+                        : 'bg-border hover:bg-primary/50'
+                      }
+                    `}
+                  />
+                )}
+              </div>
             </TableHead>
           ))}
         </TableRow>

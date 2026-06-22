@@ -26,10 +26,20 @@ import {
 } from './section-registry.tsx'
 
 const defaultOperationsSettings: OperationsSettings = {
+  RetryTimes: 0,
   DefaultCollapseSidebar: false,
   DemoSiteEnabled: false,
   SelfUseModeEnabled: false,
+  ChannelDisableThreshold: '',
   QuotaRemindThreshold: '',
+  AutomaticDisableChannelEnabled: false,
+  AutomaticEnableChannelEnabled: false,
+  AutomaticDisableKeywords: '',
+  AutomaticDisableStatusCodes: '401',
+  AutomaticRetryStatusCodes:
+    '100-199,300-399,401-407,409-499,500-503,505-523,525-599',
+  'monitor_setting.auto_test_channel_enabled': false,
+  'monitor_setting.auto_test_channel_minutes': 10,
   SMTPServer: '',
   SMTPPort: '',
   SMTPAccount: '',
@@ -53,6 +63,18 @@ const defaultOperationsSettings: OperationsSettings = {
   'perf_metrics_setting.flush_interval': 5,
   'perf_metrics_setting.bucket_time': 'hour',
   'perf_metrics_setting.retention_days': 0,
+  'rtk_setting.rtk_enabled': false,
+  'rtk_setting.rtk_min_tokens': 100,
+  'rtk_setting.rtk_max_tokens': 50000,
+  'rtk_setting.rtk_compression_level': 2,
+  'rtk_setting.caveman_enabled': false,
+  'rtk_setting.caveman_mode_level': 0,
+  'rtk_setting.caveman_min_tokens': 200,
+  'rtk_setting.enable_tool_call_validation': false,
+  'rtk_setting.enable_orphan_tool_fix': false,
+  'rtk_setting.enable_gemini_schema_cleaning': false,
+  'rtk_setting.enable_claude_normalization': false,
+  'rtk_setting.enable_remote_image_fetch': false,
 }
 
 export function OperationsSettings() {

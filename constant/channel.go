@@ -55,7 +55,26 @@ const (
 	ChannelTypeSora           = 55
 	ChannelTypeReplicate      = 56
 	ChannelTypeCodex          = 57
-	ChannelTypeAdvancedCustom = 58
+	ChannelTypeTavily         = 58
+	ChannelTypeBrave          = 59
+	ChannelTypeSerper         = 60
+	ChannelTypeExa            = 61
+	ChannelTypeSearXNG        = 62
+	ChannelTypeJinaReader     = 63
+	ChannelTypeFirecrawl      = 64
+	ChannelTypeKiro           = 65
+	ChannelTypeMimoFree       = 66
+	ChannelTypeQoder          = 67
+	ChannelTypeAgnes         = 68
+	ChannelTypeGeminiCLI     = 69
+	ChannelTypeAntigravity   = 70
+	ChannelTypeGrokCLI       = 71
+	ChannelTypeJoyCode       = 72
+	ChannelTypeCursor        = 73
+	ChannelTypeGitHubCopilot = 74
+	ChannelTypeXiaomiTokenPlan = 75
+	ChannelTypeCommandCode   = 76
+	ChannelTypeChatGPT2API   = 77
 	ChannelTypeDummy          // this one is only for count, do not add any channel after this
 
 )
@@ -119,8 +138,27 @@ var ChannelBaseURLs = []string{
 	"https://api.openai.com",                    //55
 	"https://api.replicate.com",                 //56
 	"https://chatgpt.com",                       //57
-	"",                                          //58
-}
+	"https://api.tavily.com",                    //58
+	"https://api.search.brave.com",              //59
+	"https://google.serper.dev",                 //60
+	"https://api.exa.ai",                        //61
+	"",                                          //62
+	"https://r.jina.ai",                         //63
+	"https://api.firecrawl.dev",                 //64
+	"https://codewhisperer.us-east-1.amazonaws.com", //65 Kiro
+	"https://api.xiaomimimo.com",                    //66 MiMo Free
+	"https://api.qoder.com",                         //67 Qoder
+	"https://apihub.agnes-ai.com",                   //68 Agnes
+	"https://generativelanguage.googleapis.com",     //69 GeminiCLI
+	"https://daily-cloudcode-pa.googleapis.com",     //70 Antigravity
+	"https://api.x.ai",                              //71 GrokCLI
+	"https://joycode.jd.com",                          //72 JoyCode
+	"https://api2.cursor.sh",                           //73 Cursor
+	"https://api.githubcopilot.com",                    //74 GitHub Copilot
+	"https://api.xiaomimimo.com",                       //75 Xiaomi TokenPlan
+	"https://api.commandcode.ai",                       //76 CommandCode
+	"http://localhost:3000",                             //77 ChatGPT2API
+	}
 
 var ChannelTypeNames = map[int]string{
 	ChannelTypeUnknown:        "Unknown",
@@ -177,7 +215,26 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeSora:           "Sora",
 	ChannelTypeReplicate:      "Replicate",
 	ChannelTypeCodex:          "ChatGPT Subscription (Codex)",
-	ChannelTypeAdvancedCustom: "Advanced Custom",
+	ChannelTypeTavily:         "Tavily",
+	ChannelTypeBrave:          "Brave Search",
+	ChannelTypeSerper:         "Serper",
+	ChannelTypeExa:            "Exa",
+	ChannelTypeSearXNG:        "SearXNG",
+	ChannelTypeJinaReader:     "Jina Reader",
+	ChannelTypeFirecrawl:      "Firecrawl",
+	ChannelTypeKiro:           "Kiro AI (Free)",
+	ChannelTypeMimoFree:       "MiMo Code Free",
+	ChannelTypeQoder:          "Qoder (Deprecated)",
+	ChannelTypeAgnes:         "Agnes AI",
+	ChannelTypeGeminiCLI:     "Gemini CLI",
+	ChannelTypeAntigravity:   "Antigravity",
+	ChannelTypeGrokCLI:       "Grok CLI",
+	ChannelTypeJoyCode:       "JoyCode (JD JoyCoder)",
+	ChannelTypeCursor:        "Cursor",
+	ChannelTypeGitHubCopilot: "GitHub Copilot",
+	ChannelTypeXiaomiTokenPlan: "Xiaomi TokenPlan",
+	ChannelTypeCommandCode:   "CommandCode",
+	ChannelTypeChatGPT2API:   "ChatGPT2API (Free Web)",
 }
 
 func GetChannelTypeName(channelType int) string {

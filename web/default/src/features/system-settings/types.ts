@@ -174,15 +174,6 @@ export type ModelSettings = {
   AutoGroups: string
   DefaultUseAutoGroup: boolean
   'group_ratio_setting.group_special_usable_group': string
-  RetryTimes: number
-  ChannelDisableThreshold: string
-  AutomaticDisableChannelEnabled: boolean
-  AutomaticEnableChannelEnabled: boolean
-  AutomaticDisableKeywords: string
-  AutomaticDisableStatusCodes: string
-  AutomaticRetryStatusCodes: string
-  'monitor_setting.auto_test_channel_enabled': boolean
-  'monitor_setting.auto_test_channel_minutes': number
   'channel_affinity_setting.enabled': boolean
   'channel_affinity_setting.switch_on_success': boolean
   'channel_affinity_setting.keep_on_channel_disabled': boolean
@@ -279,10 +270,19 @@ export type BillingSettings = {
 }
 
 export type OperationsSettings = {
+  RetryTimes: number
   DefaultCollapseSidebar: boolean
   DemoSiteEnabled: boolean
   SelfUseModeEnabled: boolean
+  ChannelDisableThreshold: string
   QuotaRemindThreshold: string
+  AutomaticDisableChannelEnabled: boolean
+  AutomaticEnableChannelEnabled: boolean
+  AutomaticDisableKeywords: string
+  AutomaticDisableStatusCodes: string
+  AutomaticRetryStatusCodes: string
+  'monitor_setting.auto_test_channel_enabled': boolean
+  'monitor_setting.auto_test_channel_minutes': number
   SMTPServer: string
   SMTPPort: string
   SMTPAccount: string
@@ -306,6 +306,19 @@ export type OperationsSettings = {
   'perf_metrics_setting.flush_interval': number
   'perf_metrics_setting.bucket_time': 'hour' | 'minute' | '5min'
   'perf_metrics_setting.retention_days': number
+  // RTK Token Saver Configuration
+  'rtk_setting.rtk_enabled': boolean
+  'rtk_setting.rtk_min_tokens': number
+  'rtk_setting.rtk_max_tokens': number
+  'rtk_setting.rtk_compression_level': number
+  'rtk_setting.caveman_enabled': boolean
+  'rtk_setting.caveman_mode_level': number
+  'rtk_setting.caveman_min_tokens': number
+  'rtk_setting.enable_tool_call_validation': boolean
+  'rtk_setting.enable_orphan_tool_fix': boolean
+  'rtk_setting.enable_gemini_schema_cleaning': boolean
+  'rtk_setting.enable_claude_normalization': boolean
+  'rtk_setting.enable_remote_image_fetch': boolean
 }
 
 export type SecuritySettings = {

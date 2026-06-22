@@ -22,7 +22,15 @@ import { MonitoringSettingsSection } from '../integrations/monitoring-settings-s
 import { WorkerSettingsSection } from '../integrations/worker-settings-section'
 import { LogSettingsSection } from '../maintenance/log-settings-section'
 import { PerformanceSection } from '../maintenance/performance-section'
+import { RTKSettingsSection } from '../integrations/rtk-settings-section'
 import { UpdateCheckerSection } from '../maintenance/update-checker-section'
+import { AdvancedSection } from './advanced-section'
+import { CliToolsSection } from './cli-tools-section'
+import { OpsDashboardSection } from './ops-dashboard-section'
+import { IntegrationsSection } from './integrations-section'
+import { ProxyPoolSection } from '../integrations/proxy-pool-section'
+import { ErrorPassthroughSection } from '../integrations/error-passthrough-section'
+import { WebSearchSection } from '../integrations/websearch-cleanup-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 
@@ -33,6 +41,7 @@ const OPERATIONS_SECTIONS = [
     build: (settings: OperationsSettings) => (
       <SystemBehaviorSection
         defaultValues={{
+          RetryTimes: settings.RetryTimes,
           DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
           DemoSiteEnabled: settings.DemoSiteEnabled,
           SelfUseModeEnabled: settings.SelfUseModeEnabled,
@@ -41,20 +50,23 @@ const OPERATIONS_SECTIONS = [
     ),
   },
   {
-    id: 'alerts',
+    id: 'monitoring',
     titleKey: 'Monitoring & Alerts',
     build: (settings: OperationsSettings) => (
       <MonitoringSettingsSection
         defaultValues={{
+          ChannelDisableThreshold: settings.ChannelDisableThreshold,
           QuotaRemindThreshold: settings.QuotaRemindThreshold,
-          'perf_metrics_setting.enabled':
-            settings['perf_metrics_setting.enabled'] ?? true,
-          'perf_metrics_setting.flush_interval':
-            settings['perf_metrics_setting.flush_interval'] ?? 5,
-          'perf_metrics_setting.bucket_time':
-            settings['perf_metrics_setting.bucket_time'] ?? 'hour',
-          'perf_metrics_setting.retention_days':
-            settings['perf_metrics_setting.retention_days'] ?? 0,
+          AutomaticDisableChannelEnabled:
+            settings.AutomaticDisableChannelEnabled,
+          AutomaticEnableChannelEnabled: settings.AutomaticEnableChannelEnabled,
+          AutomaticDisableKeywords: settings.AutomaticDisableKeywords,
+          AutomaticDisableStatusCodes: settings.AutomaticDisableStatusCodes,
+          AutomaticRetryStatusCodes: settings.AutomaticRetryStatusCodes,
+          'monitor_setting.auto_test_channel_enabled':
+            settings['monitor_setting.auto_test_channel_enabled'],
+          'monitor_setting.auto_test_channel_minutes':
+            settings['monitor_setting.auto_test_channel_minutes'],
         }}
       />
     ),
@@ -121,6 +133,36 @@ const OPERATIONS_SECTIONS = [
             settings['performance_setting.monitor_memory_threshold'] ?? 90,
           'performance_setting.monitor_disk_threshold':
             settings['performance_setting.monitor_disk_threshold'] ?? 95,
+          'perf_metrics_setting.enabled':
+            settings['perf_metrics_setting.enabled'] ?? true,
+          'perf_metrics_setting.flush_interval':
+            settings['perf_metrics_setting.flush_interval'] ?? 5,
+          'perf_metrics_setting.bucket_time':
+            settings['perf_metrics_setting.bucket_time'] ?? 'hour',
+          'perf_metrics_setting.retention_days':
+            settings['perf_metrics_setting.retention_days'] ?? 0,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'rtk',
+    titleKey: 'RTK Token Saver',
+    build: (settings: OperationsSettings) => (
+      <RTKSettingsSection
+        defaultValues={{
+          'rtk_setting.rtk_enabled': settings['rtk_setting.rtk_enabled'] ?? true,
+          'rtk_setting.rtk_min_tokens': settings['rtk_setting.rtk_min_tokens'] ?? 100,
+          'rtk_setting.rtk_max_tokens': settings['rtk_setting.rtk_max_tokens'] ?? 50000,
+          'rtk_setting.rtk_compression_level': settings['rtk_setting.rtk_compression_level'] ?? 2,
+          'rtk_setting.caveman_enabled': settings['rtk_setting.caveman_enabled'] ?? false,
+          'rtk_setting.caveman_mode_level': settings['rtk_setting.caveman_mode_level'] ?? 0,
+          'rtk_setting.caveman_min_tokens': settings['rtk_setting.caveman_min_tokens'] ?? 200,
+          'rtk_setting.enable_tool_call_validation': settings['rtk_setting.enable_tool_call_validation'] ?? true,
+          'rtk_setting.enable_orphan_tool_fix': settings['rtk_setting.enable_orphan_tool_fix'] ?? true,
+          'rtk_setting.enable_gemini_schema_cleaning': settings['rtk_setting.enable_gemini_schema_cleaning'] ?? true,
+          'rtk_setting.enable_claude_normalization': settings['rtk_setting.enable_claude_normalization'] ?? true,
+          'rtk_setting.enable_remote_image_fetch': settings['rtk_setting.enable_remote_image_fetch'] ?? true,
         }}
       />
     ),
@@ -138,6 +180,41 @@ const OPERATIONS_SECTIONS = [
         startTime={startTime}
       />
     ),
+  },
+  {
+    id: 'advanced',
+    titleKey: 'Advanced Ops',
+    build: () => <AdvancedSection />,
+  },
+  {
+    id: 'cli-tools',
+    titleKey: 'CLI Tools',
+    build: () => <CliToolsSection />,
+  },
+  {
+    id: 'ops-dashboard',
+    titleKey: 'Ops Dashboard',
+    build: () => <OpsDashboardSection />,
+  },
+  {
+    id: 'integrations',
+    titleKey: 'Integrations',
+    build: () => <IntegrationsSection />,
+  },
+  {
+    id: 'proxy-pool' as const,
+    titleKey: 'Proxy Pool',
+    build: () => <ProxyPoolSection />,
+  },
+  {
+    id: 'error-passthrough' as const,
+    titleKey: 'Error Passthrough',
+    build: () => <ErrorPassthroughSection />,
+  },
+  {
+    id: 'websearch' as const,
+    titleKey: 'Web Search',
+    build: () => <WebSearchSection />,
   },
 ] as const
 

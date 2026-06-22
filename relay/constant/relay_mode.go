@@ -52,6 +52,9 @@ const (
 	RelayModeGemini
 
 	RelayModeResponsesCompact
+
+	RelayModeSearch
+	RelayModeWebFetch
 )
 
 func Path2RelayMode(path string) int {
@@ -88,6 +91,10 @@ func Path2RelayMode(path string) int {
 		relayMode = RelayModeRealtime
 	} else if strings.HasPrefix(path, "/v1beta/models") || strings.HasPrefix(path, "/v1/models") {
 		relayMode = RelayModeGemini
+	} else if strings.HasPrefix(path, "/v1/search") {
+		relayMode = RelayModeSearch
+	} else if strings.HasPrefix(path, "/v1/web/fetch") {
+		relayMode = RelayModeWebFetch
 	} else if strings.HasPrefix(path, "/mj") {
 		relayMode = Path2RelayModeMidjourney(path)
 	}

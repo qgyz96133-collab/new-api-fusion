@@ -108,7 +108,17 @@ func VideoProxy(c *gin.Context) {
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
 		videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
-		req.Header.Set("Authorization", "Bearer "+channel.Key)
+		// Fix: Pick a single key for multi-key channels
+		key := channel.Key
+		if channel.ChannelInfo.IsMultiKey {
+			if k, _, err := channel.GetNextEnabledKey(); err == nil && k != "" {
+				key = k
+			}
+		}
+		req.Header.Set("Authorization", "Bearer "+key)
+	case constant.ChannelTypeAgnes:
+		// Agnes stores video URL directly in ResultURL (RemoteUrl from ParseTaskResult)
+		videoURL = task.GetResultURL()
 	default:
 		// Video URL is stored in PrivateData.ResultURL (fallback to FailReason for old data)
 		videoURL = task.GetResultURL()
@@ -129,12 +139,29 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
+	// Skip SSRF check for known safe video CDN domains
+	skipSSRF := false
+	if parsedURL, parseErr := url.Parse(videoURL); parseErr == nil {
+		host := strings.ToLower(parsedURL.Hostname())
+		safeCDNDomains := []string{
+			"agnes-ai.space", "agnes-ai.com",
+			"platform-outputs.agnes-ai.space",
+		}
+		for _, domain := range safeCDNDomains {
+			if host == domain || strings.HasSuffix(host, "."+domain) {
+				skipSSRF = true
+				break
+			}
+		}
+	}
 	fetchSetting := system_setting.GetFetchSetting()
+	if !skipSSRF {
 	if err := common.ValidateURLWithFetchSetting(videoURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Video URL blocked for task %s: %v", taskID, err))
 		videoProxyError(c, http.StatusForbidden, "server_error", fmt.Sprintf("request blocked: %v", err))
 		return
 	}
+	} // end !skipSSRF
 
 	req.URL, err = url.Parse(videoURL)
 	if err != nil {

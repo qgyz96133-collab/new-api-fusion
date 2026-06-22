@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -88,6 +90,26 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	defer func() {
 		if newAPIError != nil {
+			// === Error Passthrough 规则匹配 ===
+			svc := model.GetErrorPassthroughService()
+			platform := c.GetString("platform")
+			errorMsg := newAPIError.Error()
+			rule := svc.MatchRule(platform, newAPIError.StatusCode, []byte(errorMsg))
+			if rule != nil {
+				// 应用规则：替换状态码或消息体
+				if !rule.PassthroughCode && rule.ResponseCode != nil {
+					newAPIError.StatusCode = *rule.ResponseCode
+				}
+				if !rule.PassthroughBody && rule.CustomMessage != nil {
+					newAPIError.SetMessage(*rule.CustomMessage)
+				}
+				if common.DebugEnabled {
+					common.SysLog(fmt.Sprintf("[ErrorPassthrough] applied rule: %s (platform=%s, status=%d)",
+						rule.Name, platform, newAPIError.StatusCode))
+				}
+			}
+			// === End Error Passthrough ===
+
 			logger.LogError(c, fmt.Sprintf("relay error: %s", common.LocalLogPreview(newAPIError.Error())))
 			newAPIError.SetMessage(common.MessageWithRequestId(newAPIError.Error(), requestId))
 			switch relayFormat {
@@ -178,12 +200,13 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		}
 	}()
 
+	MarkRelayStart(c)
+
 	retryParam := &service.RetryParam{
-		Ctx:         c,
-		TokenGroup:  relayInfo.TokenGroup,
-		ModelName:   relayInfo.OriginModelName,
-		RequestPath: c.Request.URL.Path,
-		Retry:       common.GetPointer(0),
+		Ctx:        c,
+		TokenGroup: relayInfo.TokenGroup,
+		ModelName:  relayInfo.OriginModelName,
+		Retry:      common.GetPointer(0),
 	}
 	relayInfo.RetryIndex = 0
 	relayInfo.LastError = nil
@@ -222,7 +245,14 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		}
 
 		if newAPIError == nil {
+			RecordChannelSuccess(c, channel.Id)
 			relayInfo.LastError = nil
+			// 记录趋势数据 - 成功
+			if relayInfo.Usage != nil {
+				latencyMs := time.Since(c.GetTime("relay_start_time")).Milliseconds()
+				cost := float64(relayInfo.FinalPreConsumedQuota) / common.QuotaPerUnit
+				model.RecordTrend(latencyMs, false, int64(relayInfo.Usage.PromptTokens), int64(relayInfo.Usage.CompletionTokens), cost)
+			}
 			return
 		}
 
@@ -230,6 +260,10 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		relayInfo.LastError = newAPIError
 
 		processChannelError(c, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(c, constant.ContextKeyChannelKey), channel.GetAutoBan()), newAPIError)
+		RecordChannelError(c, channel.Id, newAPIError)
+		// 记录趋势数据 - 失败
+		latencyMs := time.Since(c.GetTime("relay_start_time")).Milliseconds()
+		model.RecordTrend(latencyMs, true, 0, 0, 0)
 
 		if !shouldRetry(c, newAPIError, common.RetryTimes-retryParam.GetRetry()) {
 			break
@@ -251,7 +285,21 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 var upgrader = websocket.Upgrader{
 	Subprotocols: []string{"realtime"}, // WS 握手支持的协议，如果有使用 Sec-WebSocket-Protocol，则必须在此声明对应的 Protocol TODO add other protocol
 	CheckOrigin: func(r *http.Request) bool {
-		return true // 允许跨域
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Non-browser clients (CLI, SDK) don't send Origin
+		}
+		// Same-origin check: compare Origin host against request Host
+		parsed, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		originHost := parsed.Hostname()
+		requestHost, _, err := net.SplitHostPort(r.Host)
+		if err != nil {
+			requestHost = r.Host // No port in r.Host
+		}
+		return originHost == requestHost
 	},
 }
 
@@ -508,11 +556,10 @@ func RelayTask(c *gin.Context) {
 	}()
 
 	retryParam := &service.RetryParam{
-		Ctx:         c,
-		TokenGroup:  relayInfo.TokenGroup,
-		ModelName:   relayInfo.OriginModelName,
-		RequestPath: c.Request.URL.Path,
-		Retry:       common.GetPointer(0),
+		Ctx:        c,
+		TokenGroup: relayInfo.TokenGroup,
+		ModelName:  relayInfo.OriginModelName,
+		Retry:      common.GetPointer(0),
 	}
 
 	for ; retryParam.GetRetry() <= common.RetryTimes; retryParam.IncreaseRetry() {
